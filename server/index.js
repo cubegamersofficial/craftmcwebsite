@@ -251,10 +251,13 @@ app.get('/api/server/status', async (_req, res) => {
     res.json({ ...data, updatedAt: new Date(statusCache.fetchedAt).toISOString() });
   } catch (error) {
     res.setHeader('Cache-Control', 'no-store, max-age=0');
-    res.status(502).json({
+    res.json({
+      ...statusCache.data,
+      status: statusCache.data.status || 'offline',
+      updatedAt: new Date(statusCache.fetchedAt || Date.now()).toISOString(),
+      source: 'fallback',
       error: 'Unable to fetch Minecraft server status',
       detail: String(error instanceof Error ? error.message : error),
-      fallback: statusCache.data,
     });
   }
 });

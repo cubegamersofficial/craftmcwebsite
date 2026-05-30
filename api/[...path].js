@@ -266,10 +266,13 @@ async function handle(req, res) {
       const data = await getStatusLive();
       json(res, 200, { ...data, updatedAt: new Date(statusCache.fetchedAt).toISOString() });
     } catch (error) {
-      json(res, 502, {
+      json(res, 200, {
+        ...statusCache.data,
+        status: statusCache.data.status || 'offline',
+        updatedAt: new Date(statusCache.fetchedAt || Date.now()).toISOString(),
+        source: 'fallback',
         error: 'Unable to fetch Minecraft server status',
         detail: String(error instanceof Error ? error.message : error),
-        fallback: statusCache.data,
       });
     }
     return;
