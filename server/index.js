@@ -191,7 +191,6 @@ function mapLeaderboardRows(type, rows) {
     return {
       rank: index + 1,
       username: String(username),
-      uuid: uuid ? String(uuid) : null,
       value: Number.isFinite(numericValue) ? numericValue : 0,
       valueLabel: formatValue(type, Number.isFinite(numericValue) ? numericValue : 0),
       headUrl: playerHead(username, uuid),

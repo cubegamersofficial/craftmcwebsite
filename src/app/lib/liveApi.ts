@@ -17,7 +17,6 @@ export type ServerStatus = {
 export type LeaderboardEntry = {
   rank: number;
   username: string;
-  uuid: string | null;
   value: number;
   valueLabel: string;
   headUrl: string;
@@ -38,6 +37,12 @@ export type LeaderboardPayload = {
   reason?: string | null;
 };
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') || '';
+
+function apiPath(path: string) {
+  return `${API_BASE_URL}${path}`;
+}
+
 async function safeJson<T>(response: Response): Promise<T> {
   if (!response.ok) {
     throw new Error(`Request failed (${response.status})`);
@@ -47,7 +52,7 @@ async function safeJson<T>(response: Response): Promise<T> {
 
 export async function fetchServerStatus(): Promise<ServerStatus> {
   return safeJson<ServerStatus>(
-    await fetch(`/api/server/status?t=${Date.now()}`, {
+    await fetch(apiPath(`/api/server/status?t=${Date.now()}`), {
       cache: 'no-store',
     })
   );
@@ -55,7 +60,7 @@ export async function fetchServerStatus(): Promise<ServerStatus> {
 
 export async function fetchLeaderboard(type: 'playtime' | 'money', limit = 10): Promise<LeaderboardPayload> {
   const payload = await safeJson<LeaderboardResponse>(
-    await fetch(`/api/leaderboard?type=${type}&limit=${limit}`)
+    await fetch(apiPath(`/api/leaderboard?type=${type}&limit=${limit}`))
   );
   return {
     items: payload.items,

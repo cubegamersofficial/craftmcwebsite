@@ -26,6 +26,8 @@
   - MySQL credentials
   - leaderboard SQL queries for money and playtime
 
+  If you deploy the frontend on Vercel, also set `VITE_API_BASE_URL` to the public URL of the backend API, for example `https://your-api.example.com`.
+
   ### 2) Run frontend + backend together
 
   Use:
@@ -38,6 +40,8 @@
   - Live backend API (`http://localhost:8787`)
 
   Vite proxies `/api/*` requests to the backend in development.
+
+  For production, the frontend must call a reachable backend API. If the site is hosted on Vercel, do not rely on the local Express server path; use `VITE_API_BASE_URL` to point to your deployed backend.
 
   ### 3) API endpoints
 
