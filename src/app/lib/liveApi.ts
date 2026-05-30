@@ -37,7 +37,24 @@ export type LeaderboardPayload = {
   reason?: string | null;
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') || '';
+const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/$/, '') || '';
+
+const API_BASE_URL = (() => {
+  if (!rawApiBaseUrl) {
+    return '';
+  }
+
+  try {
+    const parsed = new URL(rawApiBaseUrl, 'http://localhost');
+    if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') {
+      return '';
+    }
+  } catch {
+    return '';
+  }
+
+  return rawApiBaseUrl;
+})();
 
 function apiPath(path: string) {
   return `${API_BASE_URL}${path}`;
