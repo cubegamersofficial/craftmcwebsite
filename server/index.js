@@ -2,6 +2,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
 import mysql from 'mysql2/promise';
+import { playerHeadUrl as playerHead, queryMinecraftStatus } from './minecraftStatus.js';
 
 dotenv.config();
 
@@ -52,122 +53,11 @@ const leaderboardCache = {
   playtime: { fetchedAt: 0, data: [] },
 };
 
-function buildQueryUrl() {
-  const custom = process.env.MC_QUERY_API_URL;
-  if (custom) {
-    return custom
-      .replace('{host}', MC_HOST)
-      .replace('{port}', String(MC_PORT));
-  }
-  return `https://api.mcsrvstat.us/3/${MC_HOST}`;
-}
-
-function buildFallbackQueryUrl() {
-  return `https://api.mcstatus.io/v2/status/java/${MC_HOST}:${MC_PORT}`;
-}
-
-function playerHead(username, uuid) {
-  if (uuid && String(uuid).trim().length > 0) {
-    return `https://crafatar.com/avatars/${encodeURIComponent(uuid)}?size=128&overlay`;
-  }
-  return `https://mc-heads.net/avatar/${encodeURIComponent(String(username || 'Steve'))}/128`;
-}
-
 function formatValue(type, value) {
   if (type === 'money') {
     return `$${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
   }
   return `${value.toLocaleString(undefined, { maximumFractionDigits: 1 })}h`;
-}
-
-function getPlayerName(entry) {
-  if (typeof entry === 'string') {
-    return entry;
-  }
-
-  if (!entry || typeof entry !== 'object') {
-    return '';
-  }
-
-  return (
-    entry.name_clean ||
-    entry.name ||
-    entry.username ||
-    entry.nickname ||
-    entry.player ||
-    entry.displayName ||
-    ''
-  );
-}
-
-function getPlayerNamesFromStatus(body) {
-  const sources = [body.players?.list, body.info?.raw, body.info?.clean];
-  const names = [];
-
-  for (const source of sources) {
-    if (!Array.isArray(source)) {
-      continue;
-    }
-
-    for (const entry of source) {
-      const name = getPlayerName(entry);
-      if (name) {
-        names.push(name);
-      }
-    }
-  }
-
-  return [...new Set(names)];
-}
-
-async function queryMinecraftStatus() {
-  try {
-    const response = await fetch(buildQueryUrl(), { method: 'GET' });
-    if (!response.ok) {
-      throw new Error(`Minecraft query API failed with status ${response.status}`);
-    }
-
-    const body = await response.json();
-    const online = Boolean(body.online);
-    const playerNames = getPlayerNamesFromStatus(body);
-
-    return {
-      status: online ? 'online' : 'offline',
-      onlinePlayers: Number(body.players?.online || 0),
-      maxPlayers: Number(body.players?.max || 0),
-      host: MC_HOST,
-      port: MC_PORT,
-      playerList: playerNames.slice(0, 30).map((name) => ({
-        username: String(name),
-        headUrl: playerHead(String(name), null),
-      })),
-      motd: Array.isArray(body.motd?.clean) ? body.motd.clean.join(' ') : String(body.hostname || ''),
-      source: 'minecraft-query-api',
-    };
-  } catch {
-    const fallbackResponse = await fetch(buildFallbackQueryUrl(), { method: 'GET' });
-    if (!fallbackResponse.ok) {
-      throw new Error(`Fallback query API failed with status ${fallbackResponse.status}`);
-    }
-
-    const fallbackBody = await fallbackResponse.json();
-    const online = Boolean(fallbackBody.online);
-    const playerNames = getPlayerNamesFromStatus(fallbackBody);
-
-    return {
-      status: online ? 'online' : 'offline',
-      onlinePlayers: Number(fallbackBody.players?.online || 0),
-      maxPlayers: Number(fallbackBody.players?.max || 0),
-      host: MC_HOST,
-      port: MC_PORT,
-      playerList: playerNames.slice(0, 30).map((name) => ({
-        username: String(name),
-        headUrl: playerHead(String(name), null),
-      })),
-      motd: String(fallbackBody.motd?.clean || ''),
-      source: 'minecraft-query-api-fallback',
-    };
-  }
 }
 
 function mapLeaderboardRows(type, rows) {
@@ -221,7 +111,7 @@ async function getStatusLive() {
     return statusCache.data;
   }
 
-  const next = await queryMinecraftStatus();
+  const next = await queryMinecraftStatus(MC_HOST, MC_PORT);
   statusCache.data = next;
   statusCache.fetchedAt = now;
   return next;
