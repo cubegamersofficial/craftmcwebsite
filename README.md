@@ -43,6 +43,8 @@
 
   For production, the frontend must call a reachable backend API. If the site is hosted on Vercel, do not rely on the local Express server path; use `VITE_API_BASE_URL` to point to your deployed backend.
 
+  This repo also includes a Vercel serverless API at `api/[...path].js`, so a Vercel deployment can answer `/api/health`, `/api/server/status`, `/api/leaderboard`, and `/api/live` on the same origin when the required environment variables are configured.
+
   ### 3) API endpoints
 
   - `GET /api/health`
