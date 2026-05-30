@@ -30,7 +30,7 @@ const FALLBACK_STATUS: ServerStatus = {
   onlinePlayers: 0,
   maxPlayers: 0,
   host: 'play.craftmc.online',
-  port: 25565,
+  port: 25574,
   playerList: [],
 };
 

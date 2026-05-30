@@ -12,7 +12,7 @@ app.use(express.json());
 
 const PORT = Number(process.env.LIVE_API_PORT || 8787);
 const MC_HOST = process.env.MC_SERVER_HOST || 'play.craftmc.online';
-const MC_PORT = Number(process.env.MC_SERVER_PORT || 25565);
+const MC_PORT = Number(process.env.MC_SERVER_PORT || 25574);
 const STATUS_POLL_MS = Number(process.env.STATUS_POLL_MS || 10000);
 const LEADERBOARD_POLL_MS = Number(process.env.LEADERBOARD_POLL_MS || 30000);
 const PLAYTIME_VALUE_SECONDS = (process.env.PLAYTIME_VALUE_SECONDS || 'true').toLowerCase() === 'true';
