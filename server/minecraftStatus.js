@@ -1,7 +1,3 @@
-import minecraftServerUtil from 'minecraft-server-util';
-
-const { status: queryJavaStatus } = minecraftServerUtil;
-
 function playerHead(username, uuid) {
   if (uuid && String(uuid).trim().length > 0) {
     return `https://crafatar.com/avatars/${encodeURIComponent(uuid)}?size=128&overlay`;
@@ -105,44 +101,18 @@ export function playerHeadUrl(username, uuid) {
 }
 
 export async function queryMinecraftStatus(host, port) {
-  const timeoutMs = Number(process.env.MC_STATUS_TIMEOUT_MS || 5000);
-
   try {
-    const response = await queryJavaStatus(host, port, { timeout: timeoutMs });
-    const sample = Array.isArray(response.players?.sample) ? response.players.sample : [];
-
+    return await queryStatusViaHttpApis(host, port);
+  } catch {
     return {
-      status: 'online',
-      onlinePlayers: Number(response.players?.online || sample.length || 0),
-      maxPlayers: Number(response.players?.max || 0),
+      status: 'offline',
+      onlinePlayers: 0,
+      maxPlayers: 0,
       host,
       port,
-      playerList: sample.slice(0, 30).map((entry) => {
-        const username = getPlayerName(entry) || 'Player';
-        const uuid = entry?.id || entry?.uuid || null;
-
-        return {
-          username: String(username),
-          headUrl: playerHead(String(username), uuid),
-        };
-      }),
-      motd: Array.isArray(response.motd?.clean) ? response.motd.clean.join(' ') : String(response.motd?.raw || ''),
-      source: 'minecraft-server-util',
+      playerList: [],
+      motd: '',
+      source: 'minecraft-query-offline',
     };
-  } catch {
-    try {
-      return await queryStatusViaHttpApis(host, port);
-    } catch {
-      return {
-        status: 'offline',
-        onlinePlayers: 0,
-        maxPlayers: 0,
-        host,
-        port,
-        playerList: [],
-        motd: '',
-        source: 'minecraft-server-util-offline',
-      };
-    }
   }
 }
