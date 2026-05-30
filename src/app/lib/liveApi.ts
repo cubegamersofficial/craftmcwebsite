@@ -149,6 +149,12 @@ async function safeJson<T>(response: Response): Promise<T> {
 
 export async function fetchServerStatus(): Promise<ServerStatus> {
   try {
+    return await fetchDirectStatus();
+  } catch {
+    // fall through to backend if direct queries fail
+  }
+
+  try {
     const backend = await safeJson<ServerStatus>(
       await fetch(apiPath(`/api/server/status?t=${Date.now()}`), {
         cache: 'no-store',
@@ -159,10 +165,18 @@ export async function fetchServerStatus(): Promise<ServerStatus> {
       return backend;
     }
   } catch {
-    // fall through to direct query
+    // fall through to the offline fallback below
   }
 
-  return fetchDirectStatus();
+  return {
+    status: 'offline',
+    onlinePlayers: 0,
+    maxPlayers: 0,
+    host: DEFAULT_MC_HOST,
+    port: DEFAULT_MC_PORT,
+    playerList: [],
+    motd: '',
+  };
 }
 
 export async function fetchLeaderboard(type: 'playtime' | 'money', limit = 10): Promise<LeaderboardPayload> {
