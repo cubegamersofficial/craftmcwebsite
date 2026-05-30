@@ -10,11 +10,11 @@ function buildQueryUrl(host, port) {
   if (custom) {
     return custom.replace('{host}', host).replace('{port}', String(port));
   }
-  return `https://api.mcsrvstat.us/3/${host}:${port}`;
+  return `https://api.mcstatus.io/v2/status/java/${host}:${port}`;
 }
 
 function buildFallbackQueryUrl(host, port) {
-  return `https://api.mcstatus.io/v2/status/java/${host}:${port}`;
+  return `https://api.mcsrvstat.us/3/${host}:${port}`;
 }
 
 function getPlayerName(entry) {
@@ -77,23 +77,49 @@ function normalizeHttpStatusBody(body, host, port, source) {
 }
 
 async function queryStatusViaHttpApis(host, port) {
-  try {
-    const response = await fetch(buildQueryUrl(host, port), { method: 'GET' });
-    if (!response.ok) {
-      throw new Error(`Minecraft query API failed with status ${response.status}`);
-    }
+  const sources = [
+    { url: buildQueryUrl(host, port), source: 'minecraft-query-api' },
+    { url: buildFallbackQueryUrl(host, port), source: 'minecraft-query-api-fallback' },
+  ];
 
-    const body = await response.json();
-    return normalizeHttpStatusBody(body, host, port, 'minecraft-query-api');
-  } catch {
-    const fallbackResponse = await fetch(buildFallbackQueryUrl(host, port), { method: 'GET' });
-    if (!fallbackResponse.ok) {
-      throw new Error(`Fallback query API failed with status ${fallbackResponse.status}`);
-    }
+  let lastError = null;
+  let lastBody = null;
+  let lastStatus = null;
 
-    const fallbackBody = await fallbackResponse.json();
-    return normalizeHttpStatusBody(fallbackBody, host, port, 'minecraft-query-api-fallback');
+  for (const candidate of sources) {
+    try {
+      const response = await fetch(candidate.url, { method: 'GET' });
+      if (!response.ok) {
+        throw new Error(`Minecraft query API failed with status ${response.status}`);
+      }
+
+      const body = await response.json();
+      lastBody = body;
+      const status = normalizeHttpStatusBody(body, host, port, candidate.source);
+      lastStatus = status;
+
+      if (status.status === 'online') {
+        return status;
+      }
+
+      if (body.error || body.debug?.error || body.querymismatch) {
+        lastError = body.error?.query || body.debug?.error?.query || 'query mismatch';
+        continue;
+      }
+    } catch (error) {
+      lastError = error;
+    }
   }
+
+  if (lastStatus) {
+    return lastStatus;
+  }
+
+  if (lastBody) {
+    return normalizeHttpStatusBody(lastBody, host, port, 'minecraft-query-offline');
+  }
+
+  throw lastError instanceof Error ? lastError : new Error(String(lastError || 'Unable to query server status'));
 }
 
 export function playerHeadUrl(username, uuid) {
