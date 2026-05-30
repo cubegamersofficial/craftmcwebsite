@@ -1,3 +1,5 @@
+import net from 'node:net';
+
 function playerHead(username, uuid) {
   if (uuid && String(uuid).trim().length > 0) {
     return `https://crafatar.com/avatars/${encodeURIComponent(uuid)}?size=128&overlay`;
@@ -76,6 +78,27 @@ function normalizeHttpStatusBody(body, host, port, source) {
   };
 }
 
+function checkTcpReachability(host, port, timeoutMs = 2500) {
+  return new Promise((resolve) => {
+    const socket = net.connect({ host, port });
+    let settled = false;
+
+    const finish = (value) => {
+      if (!settled) {
+        settled = true;
+        socket.destroy();
+        resolve(value);
+      }
+    };
+
+    socket.setTimeout(timeoutMs);
+    socket.once('connect', () => finish(true));
+    socket.once('timeout', () => finish(false));
+    socket.once('error', () => finish(false));
+    socket.once('close', () => finish(false));
+  });
+}
+
 async function queryStatusViaHttpApis(host, port) {
   const sources = [
     { url: buildQueryUrl(host, port), source: 'minecraft-query-api' },
@@ -111,12 +134,25 @@ async function queryStatusViaHttpApis(host, port) {
     }
   }
 
-  if (lastStatus) {
-    return lastStatus;
+  if (lastBody) {
+    const normalized = normalizeHttpStatusBody(lastBody, host, port, 'minecraft-query-offline');
+    if (normalized.status === 'online') {
+      return normalized;
+    }
   }
 
-  if (lastBody) {
-    return normalizeHttpStatusBody(lastBody, host, port, 'minecraft-query-offline');
+  const reachable = await checkTcpReachability(host, port);
+  if (reachable) {
+    return {
+      status: 'online',
+      onlinePlayers: 0,
+      maxPlayers: 0,
+      host,
+      port,
+      playerList: [],
+      motd: '',
+      source: 'minecraft-tcp-reachable',
+    };
   }
 
   throw lastError instanceof Error ? lastError : new Error(String(lastError || 'Unable to query server status'));
