@@ -10,7 +10,7 @@ function buildQueryUrl(host, port) {
   if (custom) {
     return custom.replace('{host}', host).replace('{port}', String(port));
   }
-  return `https://api.mcsrvstat.us/3/${host}`;
+  return `https://api.mcsrvstat.us/3/${host}:${port}`;
 }
 
 function buildFallbackQueryUrl(host, port) {
